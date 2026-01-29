@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import {auth} from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const post = await prisma.post.findUnique({
-            where: { id: params.id },
+            where: { id },
             include: { author: { select: { name: true, email: true } } },
         });
 
@@ -30,9 +31,10 @@ export async function GET(
 
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const session = await auth();
 
         if (!session || !session.user) {
@@ -43,7 +45,7 @@ export async function PUT(
         }
 
         const post = await prisma.post.findUnique({
-            where: { id: params.id },
+            where: { id },
         });
 
         if (!post) {
@@ -64,7 +66,7 @@ export async function PUT(
         const { title, content, published } = body;
 
         const updatedPost = await prisma.post.update({
-            where: { id: params.id },
+            where: { id },
             data: {
                 title,
                 content,
@@ -83,9 +85,10 @@ export async function PUT(
 
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
+        const { id } = await params;
         const session = await auth();
 
         if (!session || !session.user) {
@@ -96,7 +99,7 @@ export async function DELETE(
         }
 
         const post = await prisma.post.findUnique({
-            where: { id: params.id },
+            where: { id },
         });
 
         if (!post) {
@@ -114,13 +117,14 @@ export async function DELETE(
         }
 
         await prisma.post.delete({
-            where: { id: params.id },
+            where: { id },
         });
 
         return NextResponse.json({ message: "Post deleted" });
     } catch (error) {
+        console.error("Delete post error:", error);
         return NextResponse.json(
-            { message: "Failed to delete post" },
+            { message: "Failed to delete post", error: error instanceof Error ? error.message : "Unknown error" },
             { status: 500 }
         );
     }
